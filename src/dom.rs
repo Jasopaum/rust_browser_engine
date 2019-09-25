@@ -26,3 +26,13 @@ pub fn text_node(text: String) -> Node {
         node_type: NodeType::Text(text),
     }
 }
+
+pub fn element_node(name: String, attrs: AttrMap, children: Vec<Node>) -> Node {
+    Node {
+        children: children,
+        node_type: NodeType::Element(ElementData {
+            tag_name: name,
+            attributes: attrs,
+        }),
+    }
+}
