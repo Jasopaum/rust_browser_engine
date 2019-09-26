@@ -17,7 +17,7 @@ impl Parser {
 
     fn extract_attribute(&mut self) -> (String, String) {
         let name_attr = self.extract_name(); 
-
+        
         self.consume_spaces();
         assert!(self.source.drain(..1).next() == Some('='));
 
@@ -68,6 +68,7 @@ impl Parser {
     }
 
     fn parse_node(&mut self) -> dom::Node {
+        self.consume_spaces();
         if self.source.starts_with('<') {
             self.parse_element()
         } else {
@@ -78,6 +79,7 @@ impl Parser {
     fn parse_nodes(&mut self) -> Vec<dom::Node> {
         let mut nodes = Vec::new();
         loop {
+            self.consume_spaces();
             if self.eof() || self.source.starts_with("</") {
                 break
             }
@@ -95,8 +97,9 @@ impl Parser {
     }
 }
 
-pub fn parse(source: String) -> Vec<dom::Node> {
-    let nodes = Parser { source }.parse_nodes();
+pub fn parse(source: String) -> dom::Node {
+    let mut nodes = Parser { source }.parse_nodes();
+    let mut ret = nodes.drain(..1);
 
-    return nodes;
+    ret.next().unwrap()
 }
