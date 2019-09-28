@@ -15,8 +15,8 @@ fn main() {
 
     let mut css_doc = r#"
 body {
-  background-color:#ccf;
-  letter-spacing:.1em;
+  background-color:#80abAA;
+  letter-spacing:10.5px;
 }
 p {
   font-style:italic;

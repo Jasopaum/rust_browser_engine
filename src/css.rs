@@ -44,7 +44,6 @@ pub struct Color {
     r: u8,
     g: u8,
     b: u8,
-    a: u8,
 }
 
 fn parse_identifier(source: &mut String) -> String {
@@ -55,9 +54,33 @@ fn parse_declaration_name(source: &mut String) -> String {
     let end_name = source.find(|c: char| c == ':' || c.is_whitespace()).unwrap_or(source.len());
     source.drain(..end_name).collect()
 }
-fn parse_declaration_value(source: &mut String) -> String {
+
+fn parse_keyword_value(source: &mut String) -> Value {
     let end_name = source.find(|c: char| c == ';' || c.is_whitespace()).unwrap_or(source.len());
-    source.drain(..end_name).collect()
+    let value_str = source.drain(..end_name).collect();
+    Value::Keyword(value_str)
+}
+
+fn parse_color(source: &mut String) -> Value {
+    assert!(source.drain(..1).next() == Some('#'));
+    let r_str: String = source.drain(..2).collect();
+    let r = u8::from_str_radix(&r_str, 16).unwrap();
+    let g_str: String = source.drain(..2).collect();
+    let g = u8::from_str_radix(&g_str, 16).unwrap();
+    let b_str: String = source.drain(..2).collect();
+    let b = u8::from_str_radix(&b_str, 16).unwrap();
+    Value::Color(Color{r, g, b})
+}
+
+fn parse_length(source: &mut String) -> Value {
+    let end_num = source.find(|c: char| c.is_alphabetic()).unwrap();
+    let num = source.drain(..end_num).collect::<String>()
+                                      .parse::<f32>()
+                                      .unwrap();
+    let end_unit = source.find(|c: char| !c.is_alphabetic()).unwrap();
+    let _unit = source.drain(..end_unit).collect::<String>();
+
+    Value::Length(num, Unit::Px)
 }
 
 fn parse_selector(source: &mut String) -> Selector {
@@ -95,12 +118,20 @@ fn parse_declaration(source: &mut String) -> Declaration {
     consume_spaces(source);
     assert!(source.drain(..1).next() == Some(':'));
 
-    let val_str = parse_declaration_value(source);
+    // TODO can be other than keyword
+    let value = match source.chars().next().unwrap() {
+        '#' => {
+            parse_color(source)
+        },
+        '0'..='9' => {
+            parse_length(source)
+        },
+        _ => {
+            parse_keyword_value(source)
+        },
+    };
     consume_spaces(source);
     assert!(source.drain(..1).next() == Some(';'));
-
-    // TODO can be other than keyword
-    let value = Value::Keyword(val_str);
     return Declaration{name, value}; 
 }
 
