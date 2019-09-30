@@ -9,7 +9,30 @@ use std::collections::HashMap;
 pub struct StyledNode<'a> {
     html_node: &'a dom::Node,
     properties: Properties,
-    children: Vec<StyledNode<'a>>,
+    pub children: Vec<StyledNode<'a>>,
+}
+
+pub enum Display {
+    Inline,
+    Block,
+    None,
+}
+
+impl StyledNode<'_> {
+    pub fn get_property(&self, prop: &str) -> Option<&css::Value> {
+        self.properties.get(prop)
+    }
+
+    pub fn get_display(&self) -> Display {
+        match self.get_property("display") {
+            Some(css::Value::Keyword(val)) => match val.as_str() {
+                "block" => Display::Block,
+                "none" => Display::None,
+                _ => Display::Inline,   
+            },
+            _ => Display::Inline,
+        }
+    }
 }
 
 type Properties = HashMap<String, css::Value>;

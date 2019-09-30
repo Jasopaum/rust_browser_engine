@@ -2,6 +2,7 @@ mod dom;
 mod html;
 mod css;
 mod style;
+mod layout;
 
 fn main() {
     let html_doc = r#"
@@ -32,4 +33,7 @@ p {
 
     let style_tree = style::build_style_tree(&html_tree, &style_sheet);
     println!("{}\n", style_tree);
+
+    let layout_tree = layout::build_layout_tree(&style_tree);
+    println!("{:?}\n", layout_tree);
 }
