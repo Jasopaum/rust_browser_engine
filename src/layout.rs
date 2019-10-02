@@ -35,9 +35,31 @@ struct Rect {
 #[derive(Debug, Default)]
 struct EdgeSizes {
     top: f32,
-    down: f32,
+    bottom: f32,
     left: f32,
     right: f32,
+}
+
+impl Dimensions {
+    fn padding_box(&self) -> Rect {
+        self.content.expanded_by(&self.padding)
+    }
+    fn border_box(&self) -> Rect {
+        self.padding_box().expanded_by(&self.border)
+    }
+    fn margin_box(&self) -> Rect {
+        self.border_box().expanded_by(&self.margin)
+    }
+}
+impl Rect {
+    fn expanded_by(&self, edges: &EdgeSizes) -> Rect {
+        Rect {
+            x: self.x - edges.left,
+            y: self.y - edges.top,
+            width: self.width + edges.left + edges.right,
+            height: self.height + edges.top + edges.bottom,
+        }
+    }
 }
 
 impl LayoutBox<'_> {
@@ -68,6 +90,7 @@ impl LayoutBox<'_> {
         self.compute_block_position(dim_parent);
         for child in &mut self.children {
             child.compute_dimensions(&self.dimensions);
+            self.dimensions.content.height += child.dimensions.margin_box().height;
             //TODO change height of parent after knowing height of child
         }
         self.compute_block_height();
@@ -76,6 +99,7 @@ impl LayoutBox<'_> {
     fn compute_block_width(&mut self, dim_parent: &Dimensions) {
         //TODO clean this function
         let style = &self.styled_node;
+        let dims = &mut self.dimensions;
         
         // If width not precised, set to auto
         let auto = css::Value::Keyword("auto".to_string());
@@ -105,44 +129,65 @@ impl LayoutBox<'_> {
             }
         }
 
-        self.dimensions.content.width = width.to_px();
-        self.dimensions.padding.left = padding_left.to_px();
-        self.dimensions.padding.right = padding_right.to_px();
-        self.dimensions.border.left = border_left.to_px();
-        self.dimensions.border.right = border_right.to_px();
-        self.dimensions.margin.left = margin_left.to_px();
-        self.dimensions.margin.right = margin_right.to_px();
+        dims.content.width = width.to_px();
+        dims.padding.left = padding_left.to_px();
+        dims.padding.right = padding_right.to_px();
+        dims.border.left = border_left.to_px();
+        dims.border.right = border_right.to_px();
+        dims.margin.left = margin_left.to_px();
+        dims.margin.right = margin_right.to_px();
 
         match (width == &auto, margin_left == &auto, margin_right == &auto) {
             (false, false, false) => {
-                self.dimensions.margin.right = margin_right.to_px() + underflow;
+                dims.margin.right = margin_right.to_px() + underflow;
             },
             (false, true, false) => {
-                self.dimensions.margin.left = underflow;
+                dims.margin.left = underflow;
             },
             (false, false, true) => {
-                self.dimensions.margin.right = underflow;
+                dims.margin.right = underflow;
             },
             (false, true, true) => {
-                self.dimensions.margin.left = underflow / 2.0;
-                self.dimensions.margin.right = underflow / 2.0;
+                dims.margin.left = underflow / 2.0;
+                dims.margin.right = underflow / 2.0;
             },
             (true, _, _) => {
-                if margin_left == &auto { self.dimensions.margin.left = 0.0; }    
-                if margin_right == &auto { self.dimensions.margin.right = 0.0; }    
+                if margin_left == &auto { dims.margin.left = 0.0; }    
+                if margin_right == &auto { dims.margin.right = 0.0; }    
 
                 if underflow >= 0.0 {
-                    self.dimensions.content.width = underflow;
+                    dims.content.width = underflow;
                 } else {
-                    self.dimensions.content.width = 0.0;
-                    self.dimensions.margin.right = margin_right.to_px() + underflow;
+                    dims.content.width = 0.0;
+                    dims.margin.right = margin_right.to_px() + underflow;
                 }
             },
         }
     }
-    fn compute_block_position(&self, dim_parent: &Dimensions) {
+    fn compute_block_position(&mut self, dim_parent: &Dimensions) {
+        let style = &self.styled_node;
+        let dims = &mut self.dimensions;
+        // If margin/border/padding not precised, set to 0
+        let zero = css::Value::Length(0.0, css::Unit::Px);
+
+        dims.margin.top = style.get_property("margin-top").unwrap_or(&zero).to_px();
+        dims.margin.bottom = style.get_property("margin-bottom").unwrap_or(&zero).to_px();
+        dims.border.top = style.get_property("border-top").unwrap_or(&zero).to_px();
+        dims.border.bottom = style.get_property("border-bottom").unwrap_or(&zero).to_px();
+        dims.padding.top = style.get_property("padding-top").unwrap_or(&zero).to_px();
+        dims.padding.bottom = style.get_property("padding-bottom").unwrap_or(&zero).to_px();
+
+        dims.content.x = dim_parent.content.x + 
+            dims.margin.left + dims.border.left + dims.padding.left;
+        // Place block below all other nodes in parent. Parent's height updated each time a new
+        // child is added.
+        dims.content.y = dim_parent.content.height + dim_parent.content.y +
+            dims.margin.top + dims.border.top + dims.padding.top;
     }
-    fn compute_block_height(&self) {
+    fn compute_block_height(&mut self) {
+        if let Some(h) = self.styled_node.get_property("height") {
+            self.dimensions.content.height = h.to_px();
+        }
     }
 }
 
@@ -157,10 +202,10 @@ pub fn build_layout_tree<'a>(node: &'a StyledNode) -> LayoutBox<'a> {
     }
     //TODO get browser dimensions
     let browser_dims = Dimensions{
-        content: Rect{x: 1., y: 1., width: 1., height:1.},
-        padding: EdgeSizes{top: 1., down: 1., left: 1., right: 1.},
-        border: EdgeSizes{top: 1., down: 1., left: 1., right: 1.},
-        margin: EdgeSizes{top: 1., down: 1., left: 1., right: 1.},
+        content: Rect{x: 1., y: 1., width: 1., height:0.},
+        padding: Default::default(),
+        border: Default::default(),
+        margin: Default::default(),
     };
     ret.compute_dimensions(&browser_dims);
     ret
