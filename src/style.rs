@@ -13,8 +13,8 @@ pub struct StyledNode<'a> {
 }
 
 pub enum Display {
-    Inline,
     Block,
+    Inline,
     None,
 }
 

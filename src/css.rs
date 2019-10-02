@@ -27,19 +27,29 @@ pub struct Declaration {
     pub value: Value
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     Keyword(String),
     Length(f32, Unit),
     Color(Color),
 }
 
-#[derive(Clone, Debug)]
+impl Value {
+    pub fn to_px(&self) -> f32 {
+        match self {
+            //TODO take unit into account
+            Value::Length(x, _) => *x,
+            _ => 0.0,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Unit {
     Px,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Color {
     r: u8,
     g: u8,
@@ -79,6 +89,7 @@ fn parse_length(source: &mut String) -> Value {
                                       .unwrap();
     let end_unit = source.find(|c: char| !c.is_alphabetic()).unwrap();
     let _unit = source.drain(..end_unit).collect::<String>();
+    //TODO parsed unit not considered
 
     Value::Length(num, Unit::Px)
 }
