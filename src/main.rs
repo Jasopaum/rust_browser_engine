@@ -3,6 +3,7 @@ mod html;
 mod css;
 mod style;
 mod layout;
+mod render;
 
 fn main() {
     let html_doc = r#"
@@ -36,4 +37,7 @@ p {
 
     let layout_tree = layout::build_layout_tree(&style_tree);
     println!("{:?}\n", layout_tree);
+
+    render::render_layout_tree(&layout_tree);
 }
+

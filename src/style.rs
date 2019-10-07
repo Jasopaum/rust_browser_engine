@@ -28,9 +28,11 @@ impl StyledNode<'_> {
             Some(css::Value::Keyword(val)) => match val.as_str() {
                 "block" => Display::Block,
                 "none" => Display::None,
-                _ => Display::Inline,   
+                //TODO default should be inline or block?
+                _ => Display::Block,   
             },
-            _ => Display::Inline,
+            //TODO default should be inline or block?
+            _ => Display::Block,
         }
     }
 }

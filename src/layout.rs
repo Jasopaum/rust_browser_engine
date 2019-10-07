@@ -4,7 +4,7 @@ use crate::style::StyledNode;
 
 #[derive(Debug)]
 pub struct LayoutBox<'a> {
-    dimensions: Dimensions,
+    pub dimensions: Dimensions,
     box_type: BoxType,
     styled_node: &'a StyledNode<'a>,
     pub children: Vec<LayoutBox<'a>>,
@@ -18,19 +18,19 @@ enum BoxType {
 }
 
 #[derive(Debug, Default)]
-struct Dimensions {
-   content: Rect, 
+pub struct Dimensions {
+   pub content: Rect, 
    padding: EdgeSizes, 
    border: EdgeSizes, 
    margin: EdgeSizes, 
 }
 
 #[derive(Debug, Default)]
-struct Rect {
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
+pub struct Rect {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
 }
 #[derive(Debug, Default)]
 struct EdgeSizes {
@@ -78,6 +78,7 @@ impl LayoutBox<'_> {
     }
 
     fn compute_dimensions(&mut self, dim_parent: &Dimensions) {
+        println!("COMPUTE BLOCK DIMS: {:?}", self.box_type);
         match &self.box_type {
             BoxType::BlockNode => self.compute_block_dimensions(dim_parent),
             BoxType::InlineNode => {},
@@ -103,7 +104,7 @@ impl LayoutBox<'_> {
         
         // If width not precised, set to auto
         let auto = css::Value::Keyword("auto".to_string());
-        let width = style.get_property("margin-left").unwrap_or(&auto);
+        let width = style.get_property("width").unwrap_or(&auto);
 
         // If margin/border/padding not precised, set to 0
         let zero = css::Value::Length(0.0, css::Unit::Px);
@@ -202,7 +203,7 @@ pub fn build_layout_tree<'a>(node: &'a StyledNode) -> LayoutBox<'a> {
     }
     //TODO get browser dimensions
     let browser_dims = Dimensions{
-        content: Rect{x: 1., y: 1., width: 1., height:0.},
+        content: Rect{x: 0., y: 0., width: 400., height:0.},
         padding: Default::default(),
         border: Default::default(),
         margin: Default::default(),
