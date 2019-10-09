@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct StyledNode<'a> {
-    html_node: &'a dom::Node,
+    pub html_node: &'a dom::Node,
     properties: Properties,
     pub children: Vec<StyledNode<'a>>,
 }
@@ -15,6 +15,7 @@ pub struct StyledNode<'a> {
 pub enum Display {
     Block,
     Inline,
+    Text,
     None,
 }
 
@@ -24,15 +25,18 @@ impl StyledNode<'_> {
     }
 
     pub fn get_display(&self) -> Display {
-        match self.get_property("display") {
-            Some(css::Value::Keyword(val)) => match val.as_str() {
-                "block" => Display::Block,
-                "none" => Display::None,
+        match self.html_node.node_type {
+            dom::NodeType::Text(_) => Display::Text,
+            _ => match self.get_property("display") {
+                Some(css::Value::Keyword(val)) => match val.as_str() {
+                    "block" => Display::Block,
+                    "none" => Display::None,
+                    //TODO default should be inline or block?
+                    _ => Display::Block,   
+                },
                 //TODO default should be inline or block?
-                _ => Display::Block,   
+                _ => Display::Block,
             },
-            //TODO default should be inline or block?
-            _ => Display::Block,
         }
     }
 }

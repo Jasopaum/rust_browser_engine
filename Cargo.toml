@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 piston_window = "0.105.0"
 find_folder = "0.3.0"
+textwrap = "0.11.0"

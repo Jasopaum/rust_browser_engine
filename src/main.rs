@@ -11,7 +11,7 @@ fn main() {
     <p toto = "tutu"  tata="lol" >
         test text node
     </p>
-    <dummy> </dummy>
+    <dummy> other text but very very very long this time because I need to test how long texts are dsplayed </dummy>
 </body>
 "#.to_string();
 

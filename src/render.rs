@@ -1,9 +1,12 @@
 use crate::layout;
+use crate::dom;
+use crate::css;
 
 extern crate find_folder;
 extern crate piston_window;
 
 use piston_window::*;
+use textwrap::wrap_iter;
 
 pub fn render_layout_tree(layout_tree: &layout::LayoutBox) {
     let mut window: PistonWindow = WindowSettings::new("Hello Piston!", (640, 480))
@@ -21,6 +24,16 @@ pub fn render_layout_tree(layout_tree: &layout::LayoutBox) {
 }
 
 fn render_box(window: &mut PistonWindow, e: &Event, layout_box: &layout::LayoutBox) {
+    match layout_box.box_type {
+        layout::BoxType::TextNode => render_text(window, e, layout_box),
+        _ => render_area(window, e, layout_box),
+    }
+    for child in &layout_box.children {
+        render_box(window, e, child);
+    }
+}
+
+fn render_area(window: &mut PistonWindow, e: &Event, layout_box: &layout::LayoutBox) {
     window.draw_2d(e, |c, g, _| {
         let white = [1.0, 1.0, 1.0, 1.0];
         let black = [0.0, 0.0, 0.0, 1.0];
@@ -37,18 +50,31 @@ fn render_box(window: &mut PistonWindow, e: &Event, layout_box: &layout::LayoutB
     });
 }
 
-fn render_text(window: &mut PistonWindow, e: &Event) {
+fn render_text(window: &mut PistonWindow, e: &Event, layout_box: &layout::LayoutBox) {
     let assets = find_folder::Search::ParentsThenKids(3, 3)
         .for_folder("assets").unwrap();
     let mut glyphs = window.load_font(assets.join("FiraSans-Regular.ttf")).unwrap();
-    window.draw_2d(e, |c, g, device| {
-        text::Text::new_color([0.0, 0.0, 0.0, 1.0], 32).draw(
-            "Hello world!",
-            &mut glyphs,
-            &c.draw_state,
-            c.transform.trans(10.0, 100.0), g
-        ).unwrap();
-        // Update glyphs before rendering.
-        glyphs.factory.encoder.flush(device);
-    });
+    let to_write = layout_box.get_text().unwrap();
+    let pos_x = layout_box.dimensions.content.x as f64;
+    let pos_y = layout_box.dimensions.content.y as f64;
+
+    let default_font_size = css::Value::Length(12.0, css::Unit::Px);
+    let font_size = layout_box.styled_node.get_property("font-size")
+                                           .unwrap_or(&default_font_size)
+                                           .to_px();
+    let width_char = font_size / 2.0;
+    let nb_chars_per_line = layout_box.dimensions.content.width as usize / width_char as usize;
+
+    for (i, line) in wrap_iter(to_write, nb_chars_per_line).enumerate() {
+        window.draw_2d(e, |c, g, device| {
+            text::Text::new_color([0.0, 0.0, 0.0, 1.0], 12).draw(
+                &line,
+                &mut glyphs,
+                &c.draw_state,
+                c.transform.trans(pos_x, pos_y + i as f64 * font_size as f64), g
+            ).unwrap();
+            // Update glyphs before rendering.
+            glyphs.factory.encoder.flush(device);
+        });
+    }
 }

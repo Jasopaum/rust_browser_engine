@@ -1,19 +1,21 @@
 use crate::style;
 use crate::css;
+use crate::dom;
 use crate::style::StyledNode;
 
 #[derive(Debug)]
 pub struct LayoutBox<'a> {
     pub dimensions: Dimensions,
-    box_type: BoxType,
-    styled_node: &'a StyledNode<'a>,
+    pub box_type: BoxType,
+    pub styled_node: &'a StyledNode<'a>,
     pub children: Vec<LayoutBox<'a>>,
 }
 
 #[derive(Debug)]
-enum BoxType {
+pub enum BoxType {
     BlockNode,
     InlineNode,
+    TextNode,
     AnonymousBlock,
 }
 
@@ -67,6 +69,7 @@ impl LayoutBox<'_> {
         let box_type =  match styled_node.get_display() {
             style::Display::Block => BoxType::BlockNode,   
             style::Display::Inline => BoxType::InlineNode, 
+            style::Display::Text => BoxType::TextNode, 
             style::Display::None => panic!("Cannot build layout box from node with no display."), 
         };
         LayoutBox{
@@ -79,10 +82,63 @@ impl LayoutBox<'_> {
 
     fn compute_dimensions(&mut self, dim_parent: &Dimensions) {
         println!("COMPUTE BLOCK DIMS: {:?}", self.box_type);
+        //TODO is here ok to check if text?
         match &self.box_type {
             BoxType::BlockNode => self.compute_block_dimensions(dim_parent),
             BoxType::InlineNode => {},
+            BoxType::TextNode => self.compute_text_dimensions(dim_parent),
             BoxType::AnonymousBlock => {},
+        }
+    }
+
+    fn compute_text_dimensions(&mut self, dim_parent: &Dimensions) {
+        //TODO change, uses block functions
+        //TODO compute text width
+        //TODO then height while cutting text to pieces
+        // How to get font characteristsics?
+        self.compute_text_width(dim_parent);
+        self.compute_block_position(dim_parent);
+        self.compute_text_height(dim_parent);
+    }
+
+    fn compute_text_width(&mut self, dim_parent: &Dimensions) {
+        let dims = &mut self.dimensions;
+        
+        dims.content.width = dim_parent.content.width;
+        dims.padding.left = 0.0;
+        dims.padding.right = 0.0;
+        dims.border.left = 0.0;
+        dims.border.right = 0.0;
+        dims.margin.left = 0.0;
+        dims.margin.right = 0.0;
+    }
+
+    fn compute_text_height(&mut self, dim_parent: &Dimensions) {
+        let default_font_size = css::Value::Length(12.0, css::Unit::Px);
+        let font_size = self.styled_node.get_property("font-size")
+                                        .unwrap_or(&default_font_size)
+                                        .to_px();
+        let parent_width = dim_parent.content.width;
+
+        if let dom::NodeType::Text(text) = &self.styled_node.html_node.node_type {
+            let text_length = text.len() as f32;
+        
+            // Put this in function, to be reused when rendering
+            let width_char = font_size / 2.0;
+            let nb_lines = text_length * width_char / parent_width;
+            let text_height = (nb_lines as usize + 1) * font_size as usize;
+
+            let dims = &mut self.dimensions;
+            
+            dims.content.height = text_height as f32;
+            dims.padding.top = 0.0;
+            dims.padding.bottom = 0.0;
+            dims.border.top = 0.0;
+            dims.border.bottom = 0.0;
+            dims.margin.top = 0.0;
+            dims.margin.bottom = 0.0;
+        } else {
+            panic!("Calling compute_text_height on non text.");
         }
     }
 
@@ -188,6 +244,13 @@ impl LayoutBox<'_> {
     fn compute_block_height(&mut self) {
         if let Some(h) = self.styled_node.get_property("height") {
             self.dimensions.content.height = h.to_px();
+        }
+    }
+
+    pub fn get_text(&self) -> Option<&String> {
+        match &self.styled_node.html_node.node_type {
+            dom::NodeType::Text(to_write) => Some(to_write),
+            _ => None,
         }
     }
 }
